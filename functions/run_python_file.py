@@ -1,5 +1,38 @@
 import os
 import subprocess
+from google.genai import types
+
+schema_run_python_file = types.FunctionDeclaration(
+    name="run_python_file",
+    description=(
+        "Executes a Python file relative to the working directory in a subprocess, "
+        "optionally passing command-line arguments, and returns captured stdout/stderr "
+        "or error information."
+    ),
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description=(
+                    'Path to the Python file to execute, relative to the working directory '
+                    '(e.g., "script.py" or "tools/run_task.py").'
+                ),
+            ),
+            "args": types.Schema(
+                type=types.Type.ARRAY,
+                items=types.Schema(
+                    type=types.Type.STRING,
+                ),
+                description=(
+                    "Optional list of command-line arguments to pass to the Python file "
+                    '(e.g., ["--verbose", "input.txt"]).'
+                ),
+            ),
+        },
+        required=["file_path"],
+    ),
+)
 
 def run_python_file(working_directory, file_path, args=None):
     try:

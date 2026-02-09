@@ -1,4 +1,23 @@
 import os
+from google.genai import types
+
+import os
+from google.genai import types
+
+schema_get_file_content = types.FunctionDeclaration(
+    name="get_file_content",
+    description="Reads the contents of a specified file relative to the working directory, returning up to 10,000 characters (with a truncation notice if longer).",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description='File path to read from, relative to the working directory (e.g., "notes.txt" or "pkg/readme.md").',
+            ),
+        },
+        required=["file_path"],
+    ),
+)
 
 def get_file_content(working_directory, file_path):
     working_directory = os.path.abspath(working_directory)
