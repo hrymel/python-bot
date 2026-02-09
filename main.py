@@ -9,7 +9,7 @@ from call_function import available_functions, call_function
 load_dotenv()
 api_key = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
-
+MAX_ITEMS = 20
 
 
 def main():
@@ -26,35 +26,46 @@ def main():
         types.Content(role="user", parts=[types.Part(text=prompt)]),
     ]
 
-    response = client.models.generate_content(
-        model="gemini-2.0-flash-001",
-        contents=messages,
-        config=types.GenerateContentConfig(
-            tools=[available_functions],
-            system_instruction=system_prompt,
-        ),
-    )
+    for _ in range(MAX_ITEMS):
+        response = client.models.generate_content(
+            model="gemini-2.0-flash-001",
+            contents=messages,
+            config=types.GenerateContentConfig(
+                tools=[available_functions],
+                system_instruction=system_prompt,
+            ),
+        )
 
-    function_results_parts = []
+        for candidate in response.candidates:
+            messages.append(candidate.content)
 
-    func_calls = response.function_calls or []
+        function_results_parts = []
 
-    # === PHASE 1: CALL FUNCTIONS ===
-    for func_call in func_calls:
-        function_call_result = call_function(func_call)
+        func_calls = response.function_calls or []
 
-        if not function_call_result.parts:
-            raise Exception("Error: function_call_result.parts is empty")
+        if not func_calls:
+            final_text = response.text
+            break
 
-        first_part = function_call_result.parts[0]
+        function_results_parts = []
 
-        if first_part.function_response is None:
-            raise Exception("Error: function_response is None")
+        # === PHASE 1: CALL FUNCTIONS ===
+        for func_call in func_calls:
+            function_call_result = call_function(func_call)
 
-        if first_part.function_response.response is None:
-            raise Exception("Error: function_response.response is None")
+            if not function_call_result.parts:
+                raise Exception("Error: function_call_result.parts is empty")
 
-        function_results_parts.append(first_part)
+            first_part = function_call_result.parts[0]
+
+            if first_part.function_response is None:
+                raise Exception("Error: function_response is None")
+
+            if first_part.function_response.response is None:
+                raise Exception("Error: function_response.response is None")
+
+            function_results_parts.append(first_part)
+            messages.append(types.Content(role="user", parts=function_results_parts))
 
     # === PHASE 2: PRINT OUTPUT ===
     if verbose:
